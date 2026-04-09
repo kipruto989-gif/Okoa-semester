@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, getDoc, collection, query, where, getDocs, orderBy, onSnapshot, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { BookOpen, FileText, Plus, ChevronRight, Loader2, Sparkles, Clock, File, User, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,7 +38,11 @@ export default function UnitDetail() {
       
       // Delete associated summary if it exists
       const summariesRef = collection(db, "summaries");
-      const q = query(summariesRef, where("documentId", "==", docId));
+      const q = query(
+        summariesRef, 
+        where("documentId", "==", docId),
+        where("userId", "==", auth.currentUser?.uid)
+      );
       const summarySnap = await getDocs(q);
       
       const deletePromises = summarySnap.docs.map(s => deleteDoc(doc(db, "summaries", s.id)));
@@ -67,6 +71,7 @@ export default function UnitDetail() {
     const q = query(
       collection(db, "documents"),
       where("unitId", "==", unitId),
+      where("userId", "==", auth.currentUser?.uid),
       orderBy("createdAt", "desc")
     );
 
@@ -79,7 +84,11 @@ export default function UnitDetail() {
       // Check for summaries for each document
       try {
         const summariesRef = collection(db, "summaries");
-        const summariesSnapshot = await getDocs(query(summariesRef, where("unitId", "==", unitId)));
+        const summariesSnapshot = await getDocs(query(
+          summariesRef, 
+          where("unitId", "==", unitId),
+          where("userId", "==", auth.currentUser?.uid)
+        ));
         const summaryDocIds = new Set(summariesSnapshot.docs.map(s => s.data().documentId));
 
         const docsWithSummaryStatus = docsData.map(d => ({

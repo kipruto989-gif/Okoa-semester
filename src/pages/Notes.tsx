@@ -44,7 +44,11 @@ export default function Notes() {
           
           // 2. Fetch Summary
           const summariesRef = collection(db, "summaries");
-          const q = query(summariesRef, where("documentId", "==", documentId));
+          const q = query(
+            summariesRef, 
+            where("documentId", "==", documentId),
+            where("userId", "==", auth.currentUser?.uid)
+          );
           const querySnapshot = await getDocs(q);
           
           if (!querySnapshot.empty) {
