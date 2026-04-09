@@ -5,6 +5,7 @@ import multer from "multer";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const pdf = require("pdf-parse");
+const mammoth = require("mammoth");
 import fs from "fs";
 
 async function startServer() {
@@ -15,27 +16,40 @@ async function startServer() {
 
   const upload = multer({ dest: "uploads/" });
 
-  // API route for PDF text extraction
-  app.post("/api/extract-text", upload.single("pdf"), async (req, res) => {
+  // API route for document text extraction (PDF and Word)
+  app.post("/api/extract-text", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      const dataBuffer = fs.readFileSync(req.file.path);
-      const data = await pdf(dataBuffer);
+      const filePath = req.file.path;
+      const originalName = req.file.originalname.toLowerCase();
+      let extractedText = "";
 
-      // Clean up the uploaded file
-      fs.unlinkSync(req.file.path);
-
-      if (!data.text || data.text.trim().length === 0) {
-        return res.status(400).json({ error: "No text found in PDF. It might be a scanned document." });
+      if (originalName.endsWith(".pdf")) {
+        const dataBuffer = fs.readFileSync(filePath);
+        const data = await pdf(dataBuffer);
+        extractedText = data.text;
+      } else if (originalName.endsWith(".docx")) {
+        const result = await mammoth.extractRawText({ path: filePath });
+        extractedText = result.value;
+      } else {
+        fs.unlinkSync(filePath);
+        return res.status(400).json({ error: "Unsupported file format. Please upload PDF or DOCX." });
       }
 
-      res.json({ text: data.text });
+      // Clean up the uploaded file
+      fs.unlinkSync(filePath);
+
+      if (!extractedText || extractedText.trim().length === 0) {
+        return res.status(400).json({ error: "No text found in the document." });
+      }
+
+      res.json({ text: extractedText });
     } catch (error) {
-      console.error("PDF Extraction Error:", error);
-      res.status(500).json({ error: "Failed to extract text from PDF" });
+      console.error("Extraction Error:", error);
+      res.status(500).json({ error: "Failed to extract text from document" });
     }
   });
 

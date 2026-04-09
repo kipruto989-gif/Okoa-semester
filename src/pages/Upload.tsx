@@ -15,8 +15,13 @@ export default function Upload() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      if (selectedFile.type !== "application/pdf") {
-        toast.error("Please upload a PDF file");
+      const allowedTypes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ];
+      
+      if (!allowedTypes.includes(selectedFile.type) && !selectedFile.name.endsWith(".docx")) {
+        toast.error("Please upload a PDF or Word (.docx) file");
         return;
       }
       if (selectedFile.size > 10 * 1024 * 1024) {
@@ -31,12 +36,12 @@ export default function Upload() {
     if (!file || !unitId || !auth.currentUser) return;
 
     setLoading(true);
-    setStatus("Extracting text from PDF...");
+    setStatus("Extracting text from document...");
     
     try {
       // 1. Send file to backend for text extraction
       const formData = new FormData();
-      formData.append("pdf", file);
+      formData.append("file", file);
 
       const extractRes = await fetch("/api/extract-text", {
         method: "POST",
@@ -77,7 +82,7 @@ export default function Upload() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">Upload Material</h1>
-        <p className="text-slate-500 mt-1">Upload a lecture PDF to start generating study notes.</p>
+        <p className="text-slate-500 mt-1">Upload a lecture PDF or Word document to start generating study notes.</p>
       </div>
 
       <div className="space-y-6">
@@ -89,7 +94,7 @@ export default function Upload() {
         >
           <input
             type="file"
-            accept=".pdf"
+            accept=".pdf,.docx"
             onChange={handleFileChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={loading}
@@ -114,7 +119,7 @@ export default function Upload() {
               <div className="bg-slate-100 p-4 rounded-2xl mb-4">
                 <UploadIcon className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900">Click or drag PDF here</h3>
+              <h3 className="text-lg font-bold text-slate-900">Click or drag PDF/Word here</h3>
               <p className="text-slate-500 text-sm mt-1">Maximum file size: 10MB</p>
             </div>
           )}
@@ -142,7 +147,7 @@ export default function Upload() {
         {loading && (
           <div className="flex items-center gap-3 p-4 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 text-sm animate-pulse">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p>Processing your PDF. Please don't close this page.</p>
+            <p>Processing your document. Please don't close this page.</p>
           </div>
         )}
       </div>
