@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Semester": {
+      "title": "Semester",
+      "description": "A student's academic semester",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "An academic unit or course",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "semesterId": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "lecturer": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "semesterId", "name", "code"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Metadata for an uploaded PDF document",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "extractedText": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "unitId", "fileName", "extractedText"]
+    },
+    "Summary": {
+      "title": "Summary",
+      "description": "AI-generated summary of a document",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "content": { "type": "string" },
+        "mode": { "type": "string", "enum": ["beginner", "exam", "ultra-short"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "unitId", "documentId", "content", "mode"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/semesters/{semesterId}": { "schema": "Semester", "description": "Academic semesters" },
+    "/units/{unitId}": { "schema": "Unit", "description": "Academic units" },
+    "/documents/{documentId}": { "schema": "Document", "description": "Uploaded document metadata" },
+    "/summaries/{summaryId}": { "schema": "Summary", "description": "AI summaries" }
+  }
+}

@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: semesters
+    // Document ID: {semesterId}
+    // Fields:
+    //   - userId: string (required)
+    //   - name: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: units
+    // Document ID: {unitId}
+    // Fields:
+    //   - userId: string (required)
+    //   - semesterId: string (required)
+    //   - name: string (required)
+    //   - code: string (required)
+    //   - lecturer: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: documents
+    // Document ID: {documentId}
+    // Fields:
+    //   - userId: string (required)
+    //   - unitId: string (required)
+    //   - fileName: string (required)
+    //   - fileSize: number (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: summaries
+    // Document ID: {summaryId}
+    // Fields:
+    //   - userId: string (required)
+    //   - unitId: string (required)
+    //   - documentId: string (required)
+    //   - content: string (required)
+    //   - mode: string (required, enum: beginner, exam, ultra-short)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == "kipruto989@gmail.com";
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSemester(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidUnit(data) {
+      return data.userId == request.auth.uid &&
+             data.semesterId is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.code is string && data.code.size() > 0 && data.code.size() < 20 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidDocument(data) {
+      return data.userId == request.auth.uid &&
+             data.unitId is string &&
+             data.fileName is string && data.fileName.size() > 0 &&
+             data.fileSize is number &&
+             data.extractedText is string && data.extractedText.size() > 0 && data.extractedText.size() < 800000 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSummary(data) {
+      return data.userId == request.auth.uid &&
+             data.unitId is string &&
+             data.documentId is string &&
+             data.content is string && data.content.size() > 0 &&
+             data.mode in ['beginner', 'exam', 'ultra-short'] &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    request.resource.data.uid == resource.data.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /semesters/{semesterId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidSemester(request.resource.data);
+      allow update: if (isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid)) && isValidSemester(request.resource.data);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /units/{unitId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidUnit(request.resource.data);
+      allow update: if (isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid)) && isValidUnit(request.resource.data);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /documents/{documentId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidDocument(request.resource.data);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /summaries/{summaryId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidSummary(request.resource.data);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+  }
+}
