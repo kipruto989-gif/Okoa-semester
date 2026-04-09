@@ -49,11 +49,19 @@ export default function Upload() {
       });
 
       if (!extractRes.ok) {
-        const error = await extractRes.json();
-        throw new Error(error.error || "Failed to extract text");
+        const contentType = extractRes.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const error = await extractRes.json();
+          throw new Error(error.error || "Failed to extract text");
+        } else {
+          const text = await extractRes.text();
+          console.error("Server error response:", text);
+          throw new Error(`Server error: ${extractRes.status} ${extractRes.statusText}`);
+        }
       }
 
-      const { text } = await extractRes.json();
+      const data = await extractRes.json();
+      const text = data.text;
 
       setStatus("Saving document...");
 
